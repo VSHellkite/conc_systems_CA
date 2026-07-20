@@ -1,10 +1,10 @@
 :root {
   color-scheme: dark;
-  --background: #080d18;
-  --surface: #121b2e;
-  --surface-border: #283650;
-  --text: #f7f8fb;
-  --muted: #9aa8bd;
+  --background: #202020;
+  --surface: #2a2a2a;
+  --surface-border: #555;
+  --text: #eee;
+  --muted: #bbb;
   --player-one: #163b76;
   --player-two: #f4f3ef;
   --player-three: #21b9bb;
@@ -20,9 +20,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 15% 0%, #192b4c 0, transparent 34rem),
-    var(--background);
+  background: var(--background);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -36,8 +34,8 @@ button {
   align-items: center;
   min-height: 68px;
   padding: 0 32px;
-  border-bottom: 1px solid #25324a;
-  background: rgb(8 13 24 / 82%);
+  border-bottom: 1px solid #555;
+  background: #181818;
 }
 
 .brand {
@@ -54,9 +52,9 @@ button {
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid #4c6da2;
-  border-radius: 12px;
-  background: #1b3765;
+  border: 1px solid #777;
+  border-radius: 2px;
+  background: #333;
   font-size: 12px;
 }
 
@@ -69,9 +67,8 @@ button {
 .board-card {
   padding: clamp(18px, 3vw, 34px);
   border: 1px solid var(--surface-border);
-  border-radius: 24px;
-  background: rgb(18 27 46 / 92%);
-  box-shadow: 0 24px 80px rgb(0 0 0 / 32%);
+  border-radius: 2px;
+  background: var(--surface);
 }
 
 .board-heading {
@@ -89,7 +86,7 @@ h1 {
 
 .eyebrow {
   margin: 0;
-  color: #8fb8ff;
+  color: #bbb;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -113,7 +110,7 @@ h1 {
 .zone-legend i {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border: 1px solid #888;
 }
 
 .player-one { background: var(--player-one); }
@@ -133,9 +130,9 @@ h1 {
   width: max-content;
   margin: 0 auto;
   padding: 8px 12px 12px 8px;
-  border: 1px solid #41516a;
-  border-radius: 14px;
-  background: #0a101d;
+  border: 1px solid #777;
+  border-radius: 0;
+  background: #191919;
 }
 
 .axis-label {
@@ -158,8 +155,8 @@ h1 {
   cursor: pointer;
 }
 
-.board-cell.light { background-color: #c7cbd1; }
-.board-cell.dark { background-color: #526175; }
+.board-cell.light { background-color: #b8b8b8; }
+.board-cell.dark { background-color: #666; }
 
 .board-cell.zone-1 { background-image: linear-gradient(rgb(22 59 118 / 78%), rgb(22 59 118 / 78%)); }
 .board-cell.zone-2 { background-image: linear-gradient(rgb(244 243 239 / 76%), rgb(244 243 239 / 76%)); }
@@ -173,8 +170,8 @@ h1 {
 .board-cell:hover,
 .board-cell:focus-visible {
   z-index: 1;
-  outline: 3px solid #f7c85c;
-  outline-offset: -3px;
+  outline: 2px solid #ddd;
+  outline-offset: -2px;
 }
 
 .cell-coordinate {
