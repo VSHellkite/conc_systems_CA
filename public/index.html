@@ -1,20 +1,40 @@
-<!DOCTYPE html>
-<html lang="ru">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Monster Mayhem</title>
-
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101727">
+  <title>Monster Mayhem</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <h1>Monster Mayhem</h1>
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-mark">MM</span>
+      <span>Monster Mayhem</span>
+    </div>
+  </header>
 
-    <p id="status">JavaScript Conection...</p>
+  <main class="page-shell">
+    <section class="board-card">
+      <div class="board-heading">
+        <div>
+          <p class="eyebrow">Battlefield</p>
+          <h1>10 × 10 game board</h1>
+        </div>
+        <div class="zone-legend" aria-label="Player placement zones">
+          <span><i class="player-one"></i>Player 1</span>
+          <span><i class="player-two"></i>Player 2</span>
+          <span><i class="player-three"></i>Player 3</span>
+          <span><i class="player-four"></i>Player 4</span>
+        </div>
+      </div>
+      <div class="board-scroll">
+        <div id="board" class="board" aria-label="10 by 10 game board"></div>
+      </div>
+    </section>
+  </main>
 
-    <div id="game-board"></div>
-
-    <script src="main.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

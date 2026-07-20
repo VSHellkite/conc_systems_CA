@@ -1,0 +1,202 @@
+:root {
+  color-scheme: dark;
+  --background: #080d18;
+  --surface: #121b2e;
+  --surface-border: #283650;
+  --text: #f7f8fb;
+  --muted: #9aa8bd;
+  --player-one: #163b76;
+  --player-two: #f4f3ef;
+  --player-three: #21b9bb;
+  --player-four: #ef78b5;
+  --cell-size: clamp(34px, 6.6vw, 64px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 15% 0%, #192b4c 0, transparent 34rem),
+    var(--background);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  min-height: 68px;
+  padding: 0 32px;
+  border-bottom: 1px solid #25324a;
+  background: rgb(8 13 24 / 82%);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #4c6da2;
+  border-radius: 12px;
+  background: #1b3765;
+  font-size: 12px;
+}
+
+.page-shell {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 36px 24px 64px;
+}
+
+.board-card {
+  padding: clamp(18px, 3vw, 34px);
+  border: 1px solid var(--surface-border);
+  border-radius: 24px;
+  background: rgb(18 27 46 / 92%);
+  box-shadow: 0 24px 80px rgb(0 0 0 / 32%);
+}
+
+.board-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+h1 {
+  margin: 4px 0 0;
+  font-size: clamp(24px, 4vw, 40px);
+}
+
+.eyebrow {
+  margin: 0;
+  color: #8fb8ff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.zone-legend {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 8px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.zone-legend span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.zone-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.player-one { background: var(--player-one); }
+.player-two { background: var(--player-two); }
+.player-three { background: var(--player-three); }
+.player-four { background: var(--player-four); }
+
+.board-scroll {
+  overflow-x: auto;
+  padding: 0 0 10px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: 30px repeat(10, var(--cell-size));
+  grid-template-rows: 30px repeat(10, var(--cell-size));
+  width: max-content;
+  margin: 0 auto;
+  padding: 8px 12px 12px 8px;
+  border: 1px solid #41516a;
+  border-radius: 14px;
+  background: #0a101d;
+}
+
+.axis-label {
+  display: grid;
+  place-items: center;
+  color: #b8c5d8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.board-cell {
+  position: relative;
+  display: grid;
+  width: var(--cell-size);
+  height: var(--cell-size);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.board-cell.light { background-color: #c7cbd1; }
+.board-cell.dark { background-color: #526175; }
+
+.board-cell.zone-1 { background-image: linear-gradient(rgb(22 59 118 / 78%), rgb(22 59 118 / 78%)); }
+.board-cell.zone-2 { background-image: linear-gradient(rgb(244 243 239 / 76%), rgb(244 243 239 / 76%)); }
+.board-cell.zone-3 { background-image: linear-gradient(rgb(33 185 187 / 72%), rgb(33 185 187 / 72%)); }
+.board-cell.zone-4 { background-image: linear-gradient(rgb(239 120 181 / 72%), rgb(239 120 181 / 72%)); }
+.board-cell.zone-1-3 { background-image: linear-gradient(135deg, rgb(22 59 118 / 80%) 50%, rgb(33 185 187 / 76%) 50%); }
+.board-cell.zone-1-4 { background-image: linear-gradient(135deg, rgb(22 59 118 / 80%) 50%, rgb(239 120 181 / 76%) 50%); }
+.board-cell.zone-2-3 { background-image: linear-gradient(135deg, rgb(244 243 239 / 78%) 50%, rgb(33 185 187 / 76%) 50%); }
+.board-cell.zone-2-4 { background-image: linear-gradient(135deg, rgb(244 243 239 / 78%) 50%, rgb(239 120 181 / 76%) 50%); }
+
+.board-cell:hover,
+.board-cell:focus-visible {
+  z-index: 1;
+  outline: 3px solid #f7c85c;
+  outline-offset: -3px;
+}
+
+.cell-coordinate {
+  position: absolute;
+  top: 4px;
+  left: 5px;
+  color: rgb(8 13 24 / 72%);
+  font-size: clamp(7px, 1vw, 10px);
+  font-weight: 900;
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    padding: 0 18px;
+  }
+
+  .page-shell {
+    padding: 22px 12px 48px;
+  }
+
+  .board-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+}
