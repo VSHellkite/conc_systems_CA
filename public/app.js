@@ -414,20 +414,9 @@ function placementZones(row, column) {
   return zones;
 }
 
-function addBoardLabel(text) {
-  const label = document.createElement('div');
-  label.className = 'axis-label';
-  label.textContent = text;
-  element('board').appendChild(label);
-}
-
 function createBoard() {
-  addBoardLabel('');
-  for (const columnName of COLUMN_NAMES) addBoardLabel(columnName);
-
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     boardCells[row] = [];
-    addBoardLabel(String(row + 1));
 
     for (let column = 0; column < BOARD_SIZE; column += 1) {
       const coordinate = `${COLUMN_NAMES[column]}${row + 1}`;

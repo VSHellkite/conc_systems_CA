@@ -69,7 +69,20 @@
       <div class="game-layout">
         <section class="board-card">
           <div class="board-scroll">
-            <div id="board" class="board" aria-label="10 by 10 game board"></div>
+            <div class="gothic-frame" aria-label="Gothic game board frame">
+              <img src="/assets/ui/gothic-frame-parts/top-left.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/top.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/top-right.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/left.png" alt="">
+              <div class="board-mat">
+                <img class="frame-center" src="/assets/ui/gothic-frame-parts/center.png" alt="">
+                <div id="board" class="board" aria-label="10 by 10 game board"></div>
+              </div>
+              <img src="/assets/ui/gothic-frame-parts/right.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/bottom-left.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/bottom.png" alt="">
+              <img src="/assets/ui/gothic-frame-parts/bottom-right.png" alt="">
+            </div>
           </div>
           <div class="game-controls">
             <div>
@@ -81,9 +94,24 @@
           <div id="round-log" class="round-log hidden"></div>
         </section>
 
-        <aside class="players-card">
-          <h2>Players</h2>
-          <div id="match-players" class="match-players"></div>
+        <aside class="game-sidebar">
+          <section class="players-card">
+            <h2>Players</h2>
+            <div id="match-players" class="match-players"></div>
+          </section>
+
+          <section class="rules-card">
+            <h2>Game rules</h2>
+            <ul class="rules-list">
+              <li><strong>Ghost</strong> defeats Vampire.</li>
+              <li><strong>Vampire</strong> defeats Werewolf.</li>
+              <li><strong>Werewolf</strong> defeats Ghost.</li>
+              <li>Matching monsters remove each other.</li>
+              <li>Each player may deploy, move, or skip once per round.</li>
+              <li>Move straight any distance or diagonally up to two cells.</li>
+              <li>Lose ten monsters and you are eliminated.</li>
+            </ul>
+          </section>
         </aside>
       </div>
     </section>
