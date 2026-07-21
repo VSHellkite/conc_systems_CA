@@ -58,11 +58,14 @@
     <section id="screen-game" class="screen hidden">
       <div class="match-heading">
         <div>
-          <p class="eyebrow">Match created</p>
-          <h1>Battlefield</h1>
-          <p class="muted">Player connections and assignments are active.</p>
+          <p id="round-label" class="eyebrow">Round 1</p>
+          <h1 id="game-status">Plan your actions</h1>
+          <p id="action-status">Your actions remain hidden until the round ends.</p>
         </div>
-        <button id="btn-close-match">Close match</button>
+        <div class="round-actions">
+          <strong id="round-timer">01:00</strong>
+          <button id="btn-close-game">Close test game</button>
+        </div>
       </div>
 
       <div class="game-layout">
@@ -70,6 +73,18 @@
           <div class="board-scroll">
             <div id="board" class="board" aria-label="10 by 10 game board"></div>
           </div>
+          <div class="game-controls">
+            <div>
+              <strong>Deploy one monster</strong>
+              <div class="placement-controls">
+                <button class="monster-button" data-type="ghost">Ghost</button>
+                <button class="monster-button" data-type="vampire">Vampire</button>
+                <button class="monster-button" data-type="werewolf">Werewolf</button>
+              </div>
+            </div>
+            <button id="btn-end-turn" class="primary-button">End turn</button>
+          </div>
+          <div id="round-log" class="round-log hidden"></div>
         </section>
 
         <aside class="players-card">
@@ -81,6 +96,12 @@
   </main>
 
   <div id="toast" class="toast hidden" role="alert"></div>
+  <div id="finished-banner" class="finished-banner hidden">
+    <div>
+      <h2 id="finished-message"></h2>
+      <button id="btn-return-lobby" class="primary-button">Return to lobby</button>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>

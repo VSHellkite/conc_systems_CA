@@ -3,6 +3,7 @@
 const session = require('express-session');
 
 const sessionMiddleware = session({
+  name: 'monster-mayhem.sid',
   secret: process.env.SESSION_SECRET || 'monster-mayhem-development-secret',
   resave: false,
   saveUninitialized: false,

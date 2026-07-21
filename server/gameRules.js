@@ -2,6 +2,9 @@
 
 const BOARD_SIZE = 10;
 const STARTING_MONSTER_COUNT = 10;
+const ELIMINATION_THRESHOLD = 10;
+const ROUND_DURATION_MS = 60_000;
+const REVEAL_DURATION_MS = 3_000;
 const MONSTER_TYPES = Object.freeze(['ghost', 'vampire', 'werewolf']);
 const BEATS = Object.freeze({
   ghost: 'vampire',
@@ -46,8 +49,11 @@ function toCoordinate(row, column) {
 module.exports = {
   BEATS,
   BOARD_SIZE,
+  ELIMINATION_THRESHOLD,
   MONSTER_TYPES,
   PLAYER_CONFIGS,
+  REVEAL_DURATION_MS,
+  ROUND_DURATION_MS,
   STARTING_MONSTER_COUNT,
   isPlacementPosition,
   isValidPosition,

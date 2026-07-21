@@ -4,7 +4,7 @@ const http = require('node:http');
 const path = require('node:path');
 const express = require('express');
 const { Server } = require('socket.io');
-const { LobbyManager } = require('./server/LobbyManager');
+const { GameManager } = require('./server/GameManager');
 const { sessionMiddleware } = require('./server/session');
 const { registerSocketHandlers } = require('./server/socketHandlers');
 const userStore = require('./server/userStore');
@@ -60,8 +60,8 @@ const io = new Server(server);
 
 io.engine.use(sessionMiddleware);
 
-const lobbyManager = new LobbyManager(io);
-registerSocketHandlers(io, lobbyManager);
+const gameManager = new GameManager(io);
+registerSocketHandlers(io, gameManager);
 
 const port = Number(process.env.PORT) || 3000;
 server.listen(port, () => {

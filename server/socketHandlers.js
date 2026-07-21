@@ -1,9 +1,9 @@
 'use strict';
 
 const userStore = require('./userStore');
-const { LOBBY_ROOM } = require('./LobbyManager');
+const { LOBBY_ROOM } = require('./GameManager');
 
-function registerSocketHandlers(io, lobbyManager) {
+function registerSocketHandlers(io, gameManager) {
   io.on('connection', (socket) => {
     const userId = socket.request.session?.userId;
     const user = userId ? userStore.getPublicUser(userId) : null;
@@ -15,27 +15,49 @@ function registerSocketHandlers(io, lobbyManager) {
 
     socket.emit('account:state', user);
 
-    const match = lobbyManager.reconnect(userId, socket.id);
-    if (match) {
-      socket.emit('match:started', lobbyManager.getMatchState(match));
-    }
+    const game = gameManager.reconnect(userId, socket.id);
+    if (game) socket.emit('game:started', game.getPublicState());
 
     socket.on('lobby:join', () => {
-      if (lobbyManager.userMatchIndex.has(userId)) return;
+      if (gameManager.userGameIndex.has(userId)) return;
       socket.join(LOBBY_ROOM);
-      lobbyManager.joinLobby(user, socket.id);
+      gameManager.joinLobby(userStore.getPublicUser(userId), socket.id);
     });
 
     socket.on('lobby:start', () => {
       try {
-        lobbyManager.startMatch(userId);
+        gameManager.startGame(userId);
       } catch (error) {
         socket.emit('server:error', { message: error.message });
       }
     });
 
-    socket.on('match:close', () => lobbyManager.closeMatch(userId));
-    socket.on('disconnect', () => lobbyManager.disconnect(userId));
+    socket.on('game:placeMonster', async ({ gameId, type, row, column } = {}) => {
+      try {
+        await gameManager.placeMonster(userId, gameId, type, row, column);
+      } catch (error) {
+        socket.emit('server:error', { message: error.message });
+      }
+    });
+
+    socket.on('game:moveMonster', async ({ gameId, monsterId, row, column } = {}) => {
+      try {
+        await gameManager.moveMonster(userId, gameId, monsterId, row, column);
+      } catch (error) {
+        socket.emit('server:error', { message: error.message });
+      }
+    });
+
+    socket.on('game:endTurn', async ({ gameId } = {}) => {
+      try {
+        await gameManager.endTurn(userId, gameId);
+      } catch (error) {
+        socket.emit('server:error', { message: error.message });
+      }
+    });
+
+    socket.on('game:close', () => gameManager.closeGame(userId));
+    socket.on('disconnect', () => gameManager.disconnect(userId));
   });
 }
 
