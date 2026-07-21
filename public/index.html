@@ -15,8 +15,6 @@
     </div>
     <div id="account-summary" class="account-summary hidden">
       <strong id="header-username"></strong>
-      <span>Wins: <b id="stat-wins">0</b></span>
-      <span>Losses: <b id="stat-losses">0</b></span>
       <button id="btn-logout" class="small-button">Log out</button>
     </div>
   </header>
@@ -76,11 +74,7 @@
           <div class="game-controls">
             <div>
               <strong>Deploy one monster</strong>
-              <div class="placement-controls">
-                <button class="monster-button" data-type="ghost">Ghost</button>
-                <button class="monster-button" data-type="vampire">Vampire</button>
-                <button class="monster-button" data-type="werewolf">Werewolf</button>
-              </div>
+              <div id="placement-controls" class="placement-controls"></div>
             </div>
             <button id="btn-end-turn" class="primary-button">End turn</button>
           </div>

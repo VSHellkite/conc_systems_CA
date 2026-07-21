@@ -358,24 +358,14 @@ h2 {
   font-weight: 900;
 }
 
-.monster-token {
+.monster-sprite {
   position: relative;
   z-index: 2;
-  display: grid;
-  width: 70%;
-  height: 70%;
-  place-items: center;
-  border: 2px solid #111;
-  background: #ddd;
-  color: #111;
-  font-size: clamp(12px, 2vw, 22px);
-  font-weight: 900;
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  pointer-events: none;
 }
-
-.monster-token.player-1 { background: var(--player-one); color: #fff; }
-.monster-token.player-2 { background: var(--player-two); color: #111; }
-.monster-token.player-3 { background: var(--player-three); color: #111; }
-.monster-token.player-4 { background: var(--player-four); color: #111; }
 
 .board-cell.selected-monster {
   outline: 4px solid #f7c85c;
@@ -397,6 +387,25 @@ h2 {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.monster-button {
+  display: grid;
+  min-width: 86px;
+  justify-items: center;
+  gap: 3px;
+  padding: 7px;
+  text-transform: capitalize;
+}
+
+.monster-button img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.monster-button strong {
+  font-size: 17px;
 }
 
 .monster-button.active {
@@ -449,8 +458,9 @@ h2 {
   border-radius: 0;
 }
 
-.player-card div {
+.player-card > div {
   display: grid;
+  width: 100%;
   min-width: 0;
   gap: 4px;
 }
@@ -467,6 +477,26 @@ h2 {
 
 .player-card.disconnected {
   opacity: 0.5;
+}
+
+.player-resources {
+  display: flex;
+  gap: 10px;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.player-resource {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.player-resource img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
 }
 
 .toast {

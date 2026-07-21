@@ -31,8 +31,6 @@ function showToast(message) {
 function updateAccount(user) {
   currentUser = user;
   element('header-username').textContent = user.username;
-  element('stat-wins').textContent = user.gamesWon;
-  element('stat-losses').textContent = user.gamesLost;
   element('account-summary').classList.remove('hidden');
 }
 
@@ -115,11 +113,9 @@ function renderLobby(players) {
   players.forEach((player) => {
     const item = document.createElement('li');
     const name = document.createElement('strong');
-    const record = document.createElement('span');
 
     name.textContent = player.username;
-    record.textContent = `${player.gamesWon} wins / ${player.gamesLost} losses`;
-    item.append(name, record);
+    item.append(name);
     list.appendChild(item);
   });
 
@@ -131,14 +127,6 @@ element('btn-close-game').addEventListener('click', () => socket.emit('game:clos
 element('btn-return-lobby').addEventListener('click', returnToLobby);
 element('btn-end-turn').addEventListener('click', () => {
   if (currentGame) socket.emit('game:endTurn', { gameId: currentGame.id });
-});
-
-document.querySelectorAll('.monster-button').forEach((button) => {
-  button.addEventListener('click', () => {
-    placingType = placingType === button.dataset.type ? null : button.dataset.type;
-    selectedMonsterId = null;
-    renderControls();
-  });
 });
 
 function returnToLobby() {
@@ -201,13 +189,40 @@ function renderControls() {
     || player?.hasEndedTurn
     || player?.eliminated;
   const hasPlaced = privateTurnState?.hasPlacedThisRound || false;
+  const reserves = privateTurnState?.reserves || player.reserves;
+  const controls = element('placement-controls');
 
-  document.querySelectorAll('.monster-button').forEach((button) => {
-    button.disabled = locked || hasPlaced;
-    button.classList.toggle('active', placingType === button.dataset.type);
-  });
+  controls.replaceChildren();
+
+  for (const type of ['ghost', 'vampire', 'werewolf']) {
+    const button = document.createElement('button');
+    const image = document.createElement('img');
+    const name = document.createElement('span');
+    const count = document.createElement('strong');
+
+    button.type = 'button';
+    button.className = 'monster-button';
+    button.dataset.type = type;
+    button.disabled = locked || hasPlaced || reserves[type] === 0;
+    button.classList.toggle('active', placingType === type);
+    image.src = spritePath(type, player.number);
+    image.alt = '';
+    name.textContent = type;
+    count.textContent = reserves[type];
+    button.append(image, name, count);
+    button.addEventListener('click', () => {
+      placingType = placingType === type ? null : type;
+      selectedMonsterId = null;
+      renderControls();
+    });
+    controls.appendChild(button);
+  }
 
   element('btn-end-turn').disabled = locked;
+}
+
+function spritePath(type, playerNumber) {
+  return `/assets/${type}${playerNumber}_64x64.png`;
 }
 
 function renderBoard() {
@@ -215,17 +230,18 @@ function renderBoard() {
     for (let column = 0; column < BOARD_SIZE; column += 1) {
       const button = boardCells[row][column];
       const cell = currentGame.board[row][column];
-      button.querySelector('.monster-token')?.remove();
+      button.querySelector('.monster-sprite')?.remove();
       button.classList.remove('selected-monster');
 
       if (!cell) continue;
 
       const owner = currentGame.players.find((player) => player.userId === cell.ownerId);
-      const token = document.createElement('span');
-      token.className = `monster-token player-${owner.number}`;
-      token.textContent = cell.type[0].toUpperCase();
-      token.title = `${owner.username}: ${cell.type}`;
-      button.appendChild(token);
+      const sprite = document.createElement('img');
+      sprite.className = 'monster-sprite';
+      sprite.src = spritePath(cell.type, owner.number);
+      sprite.alt = `${owner.username}'s ${cell.type}`;
+      sprite.title = sprite.alt;
+      button.appendChild(sprite);
 
       if (cell.id === selectedMonsterId) button.classList.add('selected-monster');
     }
@@ -283,21 +299,38 @@ function renderPlayers() {
     const marker = document.createElement('i');
     const details = document.createElement('div');
     const name = document.createElement('strong');
-    const assignment = document.createElement('span');
     const state = document.createElement('small');
+    const resources = document.createElement('div');
 
     card.className = 'player-card';
     if (!player.connected) card.classList.add('disconnected');
     marker.style.backgroundColor = player.color;
     name.textContent = player.username;
-    assignment.textContent = `Player ${player.number} · ${player.edge}`;
 
     let turnState = player.hasEndedTurn ? 'ready' : 'planning';
     if (!player.connected) turnState = 'disconnected';
     if (player.eliminated) turnState = 'eliminated';
-    state.textContent = `${player.removedCount}/10 removed · ${turnState}`;
+    state.textContent = `${player.removedCount}/10 removed - ${turnState}`;
+    resources.className = 'player-resources';
 
-    details.append(name, assignment, state);
+    const reserves = player.userId === currentUser.userId && privateTurnState
+      ? privateTurnState.reserves
+      : player.reserves;
+
+    for (const type of ['ghost', 'vampire', 'werewolf']) {
+      const resource = document.createElement('span');
+      const image = document.createElement('img');
+      const count = document.createElement('b');
+
+      resource.className = 'player-resource';
+      image.src = spritePath(type, player.number);
+      image.alt = type;
+      count.textContent = reserves[type];
+      resource.append(image, count);
+      resources.appendChild(resource);
+    }
+
+    details.append(name, state, resources);
     card.append(marker, details);
     panel.appendChild(card);
   });
