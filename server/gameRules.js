@@ -1,12 +1,24 @@
 'use strict';
 
 const BOARD_SIZE = 10;
-const STARTING_MONSTER_COUNT = 10;
-const ELIMINATION_THRESHOLD = 10;
 const INACTIVITY_ELIMINATION_THRESHOLD = 5;
 const ROUND_DURATION_MS = 60_000;
 const REVEAL_DURATION_MS = 3_000;
 const MONSTER_TYPES = Object.freeze(['ghost', 'vampire', 'werewolf']);
+const GAME_MODES = Object.freeze({
+  quick: Object.freeze({
+    id: 'quick',
+    label: 'Quick game',
+    startingMonsterCount: 3,
+    eliminationThreshold: 5,
+  }),
+  standard: Object.freeze({
+    id: 'standard',
+    label: 'Standard game',
+    startingMonsterCount: 5,
+    eliminationThreshold: 10,
+  }),
+});
 const BEATS = Object.freeze({
   ghost: 'vampire',
   vampire: 'werewolf',
@@ -47,16 +59,22 @@ function toCoordinate(row, column) {
   return `${String.fromCharCode(65 + column)}${row + 1}`;
 }
 
+function getGameMode(modeId) {
+  const mode = GAME_MODES[modeId];
+  if (!mode) throw new Error('Unknown game mode.');
+  return mode;
+}
+
 module.exports = {
   BEATS,
   BOARD_SIZE,
-  ELIMINATION_THRESHOLD,
+  GAME_MODES,
   INACTIVITY_ELIMINATION_THRESHOLD,
   MONSTER_TYPES,
   PLAYER_CONFIGS,
   REVEAL_DURATION_MS,
   ROUND_DURATION_MS,
-  STARTING_MONSTER_COUNT,
+  getGameMode,
   isPlacementPosition,
   isValidPosition,
   toCoordinate,

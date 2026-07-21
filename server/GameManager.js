@@ -2,16 +2,22 @@
 
 const { randomUUID } = require('node:crypto');
 const { Game } = require('./Game');
-const { REVEAL_DURATION_MS, ROUND_DURATION_MS } = require('./gameRules');
+const {
+  GAME_MODES,
+  REVEAL_DURATION_MS,
+  ROUND_DURATION_MS,
+  getGameMode,
+} = require('./gameRules');
 const userStore = require('./userStore');
 
-const LOBBY_ROOM = 'lobby';
+const lobbyRoom = (modeId) => `lobby:${modeId}`;
 const gameRoom = (gameId) => `game:${gameId}`;
 
 class GameManager {
   constructor(io) {
     this.io = io;
-    this.waitingPlayers = [];
+    this.lobbies = new Map(Object.keys(GAME_MODES).map((modeId) => [modeId, []]));
+    this.userLobbyIndex = new Map();
     this.games = new Map();
     this.userGameIndex = new Map();
     this.roundTimers = new Map();
@@ -22,59 +28,102 @@ class GameManager {
     return this.io.sockets.sockets.get(socketId);
   }
 
-  joinLobby(user, socketId) {
-    if (this.userGameIndex.has(user.userId)) return;
+  joinLobby(user, socketId, modeId) {
+    const mode = getGameMode(modeId);
+    if (this.userGameIndex.has(user.userId)) return null;
 
-    const waitingPlayer = this.waitingPlayers.find((player) => player.userId === user.userId);
+    const previousModeId = this.userLobbyIndex.get(user.userId);
+    if (previousModeId && previousModeId !== mode.id) this.leaveLobby(user.userId);
+
+    const lobby = this.lobbies.get(mode.id);
+    const waitingPlayer = lobby.find((player) => player.userId === user.userId);
     if (waitingPlayer) waitingPlayer.socketId = socketId;
-    else this.waitingPlayers.push({ ...user, socketId });
+    else lobby.push({ ...user, socketId, ready: false });
 
-    this.broadcastLobby();
-    if (this.waitingPlayers.length === 4) this.startGame(user.userId);
+    this.userLobbyIndex.set(user.userId, mode.id);
+    const socket = this.getSocket(socketId);
+    if (socket) socket.join(lobbyRoom(mode.id));
+    this.broadcastLobby(mode.id);
+
+    return lobby.length === 4 ? this.startGame(mode.id, true) : null;
   }
 
   leaveLobby(userId) {
-    const previousLength = this.waitingPlayers.length;
-    this.waitingPlayers = this.waitingPlayers.filter((player) => player.userId !== userId);
-    if (this.waitingPlayers.length !== previousLength) this.broadcastLobby();
+    const modeId = this.userLobbyIndex.get(userId);
+    if (!modeId) return false;
+
+    const lobby = this.lobbies.get(modeId);
+    const player = lobby.find((entry) => entry.userId === userId);
+    this.lobbies.set(modeId, lobby.filter((entry) => entry.userId !== userId));
+    this.userLobbyIndex.delete(userId);
+
+    const socket = player ? this.getSocket(player.socketId) : null;
+    if (socket) socket.leave(lobbyRoom(modeId));
+    this.broadcastLobby(modeId);
+
+    const remainingPlayers = this.lobbies.get(modeId);
+    if (remainingPlayers.length >= 2 && remainingPlayers.every((entry) => entry.ready)) {
+      this.startGame(modeId);
+    }
+    return true;
   }
 
-  broadcastLobby() {
-    this.io.to(LOBBY_ROOM).emit('lobby:state', {
-      players: this.waitingPlayers.map((player) => ({
+  broadcastLobby(modeId) {
+    const mode = getGameMode(modeId);
+    this.io.to(lobbyRoom(mode.id)).emit('lobby:state', {
+      mode: { ...mode },
+      players: this.lobbies.get(mode.id).map((player) => ({
         userId: player.userId,
         username: player.username,
         gamesWon: player.gamesWon,
         gamesLost: player.gamesLost,
         gamesDrawn: player.gamesDrawn || 0,
+        ready: player.ready,
       })),
     });
   }
 
-  startGame(requestingUserId) {
-    if (!this.waitingPlayers.some((player) => player.userId === requestingUserId)) {
-      throw new Error('You are not waiting in the lobby.');
-    }
-    if (this.waitingPlayers.length < 2) {
+  readyPlayer(userId) {
+    const modeId = this.userLobbyIndex.get(userId);
+    if (!modeId) throw new Error('You are not waiting in a lobby.');
+
+    const lobby = this.lobbies.get(modeId);
+    const player = lobby.find((entry) => entry.userId === userId);
+    player.ready = true;
+    this.broadcastLobby(modeId);
+
+    return lobby.length >= 2 && lobby.every((entry) => entry.ready)
+      ? this.startGame(modeId)
+      : null;
+  }
+
+  startGame(modeId, automatic = false) {
+    const mode = getGameMode(modeId);
+    const lobby = this.lobbies.get(mode.id);
+    if (lobby.length < 2) {
       throw new Error('At least two players are required to start a game.');
     }
+    if (!automatic && !lobby.every((player) => player.ready)) {
+      throw new Error('Every player must be ready to start the game.');
+    }
 
-    const selectedUsers = this.waitingPlayers.splice(0, 4);
-    const game = new Game(randomUUID(), selectedUsers);
+    const selectedUsers = lobby.splice(0, 4);
+    const game = new Game(randomUUID(), selectedUsers, Date.now(), mode.id);
     this.games.set(game.id, game);
 
     for (const player of game.players) {
+      this.userLobbyIndex.delete(player.userId);
       this.userGameIndex.set(player.userId, game.id);
       const socket = this.getSocket(player.socketId);
 
       if (socket) {
-        socket.leave(LOBBY_ROOM);
+        socket.leave(lobbyRoom(mode.id));
         socket.join(gameRoom(game.id));
       }
     }
 
     this.io.to(gameRoom(game.id)).emit('game:started', game.getPublicState());
-    this.broadcastLobby();
+    this.broadcastLobby(mode.id);
     this.scheduleRoundTimeout(game);
     return game;
   }
@@ -232,4 +281,4 @@ class GameManager {
   }
 }
 
-module.exports = { GameManager, LOBBY_ROOM };
+module.exports = { GameManager, lobbyRoom };

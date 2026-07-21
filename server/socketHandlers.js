@@ -1,7 +1,6 @@
 'use strict';
 
 const userStore = require('./userStore');
-const { LOBBY_ROOM } = require('./GameManager');
 
 function registerSocketHandlers(io, gameManager) {
   io.on('connection', (socket) => {
@@ -21,19 +20,24 @@ function registerSocketHandlers(io, gameManager) {
       socket.emit('game:actionAccepted', game.getPrivateTurnState(userId));
     }
 
-    socket.on('lobby:join', () => {
-      if (gameManager.userGameIndex.has(userId)) return;
-      socket.join(LOBBY_ROOM);
-      gameManager.joinLobby(userStore.getPublicUser(userId), socket.id);
-    });
-
-    socket.on('lobby:start', () => {
+    socket.on('lobby:join', ({ modeId } = {}) => {
       try {
-        gameManager.startGame(userId);
+        if (gameManager.userGameIndex.has(userId)) return;
+        gameManager.joinLobby(userStore.getPublicUser(userId), socket.id, modeId);
       } catch (error) {
         socket.emit('server:error', { message: error.message });
       }
     });
+
+    socket.on('lobby:ready', () => {
+      try {
+        gameManager.readyPlayer(userId);
+      } catch (error) {
+        socket.emit('server:error', { message: error.message });
+      }
+    });
+
+    socket.on('lobby:leave', () => gameManager.leaveLobby(userId));
 
     socket.on('game:placeMonster', async ({ gameId, type, row, column } = {}) => {
       try {

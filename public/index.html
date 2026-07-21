@@ -24,7 +24,7 @@
       <div class="auth-card">
         <p class="eyebrow">Multiplayer strategy</p>
         <h1>Command your monsters</h1>
-        <p class="muted">Create an account or log in to enter the player lobby.</p>
+        <p class="muted">Create an account or log in to choose a game mode.</p>
         <form id="auth-form" class="auth-form">
           <label>
             <span>Username</span>
@@ -43,13 +43,42 @@
       </div>
     </section>
 
+    <section id="screen-profile" class="screen hidden">
+      <div class="profile-card">
+        <p class="eyebrow">Player profile</p>
+        <h1 id="profile-username">Player</h1>
+        <div class="profile-stats" aria-label="Player statistics">
+          <div><span>Wins</span><strong id="profile-wins">0</strong></div>
+          <div><span>Losses</span><strong id="profile-losses">0</strong></div>
+          <div><span>Draws</span><strong id="profile-draws">0</strong></div>
+        </div>
+        <h2>Choose a game mode</h2>
+        <div class="mode-options">
+          <button class="mode-button" data-mode="quick" type="button">
+            <strong>Quick game</strong>
+            <span>3 monsters of each type</span>
+            <span>Eliminated after 5 monsters are removed</span>
+          </button>
+          <button class="mode-button" data-mode="standard" type="button">
+            <strong>Standard game</strong>
+            <span>5 monsters of each type</span>
+            <span>Eliminated after 10 monsters are removed</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section id="screen-lobby" class="screen hidden">
       <div class="lobby-card">
-        <p class="eyebrow">Matchmaking</p>
+        <p id="lobby-mode-label" class="eyebrow">Matchmaking</p>
         <h1>Player lobby</h1>
-        <p class="muted">A match needs 2–4 players and starts automatically when the fourth player joins.</p>
+        <p id="lobby-mode-description" class="muted"></p>
+        <p class="muted">Every player must press Start match. A four-player lobby starts automatically.</p>
         <ol id="lobby-players" class="lobby-list"></ol>
-        <button id="btn-start" class="primary-button" disabled>Start match</button>
+        <div class="button-row">
+          <button id="btn-change-mode" type="button">Change mode</button>
+          <button id="btn-start" class="primary-button" type="button">Start match</button>
+        </div>
       </div>
     </section>
 
@@ -110,7 +139,7 @@
               <li>If all three monster types meet, all of them are removed.</li>
               <li>Each player may deploy, move, or skip once per round.</li>
               <li>Move straight any distance or diagonally up to two cells.</li>
-              <li>Lose ten monsters and you are eliminated.</li>
+              <li>Lose <span id="rule-elimination-threshold">10</span> monsters and you are eliminated.</li>
               <li>Skip five consecutive turns and you are eliminated.</li>
             </ul>
           </section>
@@ -123,7 +152,7 @@
   <div id="finished-banner" class="finished-banner hidden">
     <div>
       <h2 id="finished-message"></h2>
-      <button id="btn-return-lobby" class="primary-button">Return to lobby</button>
+      <button id="btn-return-lobby" class="primary-button">Choose another mode</button>
     </div>
   </div>
 

@@ -2,14 +2,18 @@
 
 const { Monster } = require('./Monster');
 const {
+  GAME_MODES,
   MONSTER_TYPES,
   PLAYER_CONFIGS,
-  STARTING_MONSTER_COUNT,
   isPlacementPosition,
 } = require('./gameRules');
 
 class Player {
-  constructor({ userId, username }, playerNumber) {
+  constructor(
+    { userId, username },
+    playerNumber,
+    startingMonsterCount = GAME_MODES.standard.startingMonsterCount,
+  ) {
     const config = PLAYER_CONFIGS[playerNumber - 1];
 
     if (!userId || !username) {
@@ -27,7 +31,7 @@ class Player {
     this.color = config.color;
     this.monsters = new Map();
     this.reserves = Object.fromEntries(
-      MONSTER_TYPES.map((type) => [type, STARTING_MONSTER_COUNT]),
+      MONSTER_TYPES.map((type) => [type, startingMonsterCount]),
     );
     this.removedCount = 0;
   }

@@ -4,20 +4,21 @@ const { Board } = require('./Board');
 const { resolveCellCombat } = require('./Monster');
 const { Player } = require('./Player');
 const {
-  ELIMINATION_THRESHOLD,
   INACTIVITY_ELIMINATION_THRESHOLD,
   REVEAL_DURATION_MS,
   ROUND_DURATION_MS,
+  getGameMode,
   toCoordinate,
 } = require('./gameRules');
 
 class Game {
-  constructor(id, joiningUsers, now = Date.now()) {
+  constructor(id, joiningUsers, now = Date.now(), modeId = 'standard') {
     if (joiningUsers.length < 2 || joiningUsers.length > 4) {
       throw new Error('A game requires between two and four players.');
     }
 
     this.id = id;
+    this.mode = getGameMode(modeId);
     this.board = new Board();
     this.roundNumber = 1;
     this.phase = 'planning';
@@ -29,7 +30,7 @@ class Game {
     this.pendingActions = [];
     this.lastResolution = null;
     this.players = joiningUsers.map((user, index) => {
-      const player = new Player(user, index + 1);
+      const player = new Player(user, index + 1, this.mode.startingMonsterCount);
       player.socketId = user.socketId;
       player.gamesWon = user.gamesWon;
       player.gamesLost = user.gamesLost;
@@ -257,7 +258,7 @@ class Game {
     const newlyEliminated = [];
 
     for (const player of this.players) {
-      const lostByMonsters = player.removedCount >= ELIMINATION_THRESHOLD;
+      const lostByMonsters = player.removedCount >= this.mode.eliminationThreshold;
       const lostByInactivity = player.consecutiveSkips >= INACTIVITY_ELIMINATION_THRESHOLD;
       if (player.eliminated || (!lostByMonsters && !lostByInactivity)) continue;
 
@@ -373,6 +374,7 @@ class Game {
 
     return {
       id: this.id,
+      mode: { ...this.mode },
       roundNumber: this.roundNumber,
       phase: this.phase,
       status: this.status,

@@ -159,6 +159,7 @@ h2 {
 }
 
 .auth-card,
+.profile-card,
 .lobby-card,
 .board-card,
 .players-card,
@@ -171,6 +172,57 @@ h2 {
 .auth-card {
   width: min(450px, 100%);
   padding: 36px;
+}
+
+.profile-card {
+  width: min(760px, 100%);
+  margin: 42px auto;
+  padding: 36px;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 24px 0 32px;
+}
+
+.profile-stats > div {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #31425e;
+  background: #101a2d;
+}
+
+.profile-stats span {
+  font-size: 13px;
+}
+
+.profile-stats strong {
+  font-size: 25px;
+}
+
+.mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.mode-button {
+  display: grid;
+  min-height: 150px;
+  align-content: start;
+  gap: 10px;
+  text-align: left;
+}
+
+.mode-button strong {
+  font-size: 20px;
+}
+
+.mode-button span {
+  font-size: 14px;
 }
 
 .auth-form {
@@ -672,6 +724,7 @@ h2 {
   }
 
   .auth-card,
+  .profile-card,
   .lobby-card {
     padding: 25px 20px;
   }
@@ -695,5 +748,10 @@ h2 {
   .lobby-list li {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .profile-stats,
+  .mode-options {
+    grid-template-columns: 1fr;
   }
 }

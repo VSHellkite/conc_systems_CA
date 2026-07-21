@@ -9,6 +9,7 @@ let currentGame = null;
 let selectedMonsterId = null;
 let placingType = null;
 let privateTurnState = null;
+let selectedModeId = null;
 let clockOffset = 0;
 let toastTimer = null;
 
@@ -31,6 +32,10 @@ function showToast(message) {
 function updateAccount(user) {
   currentUser = user;
   element('header-username').textContent = user.username;
+  element('profile-username').textContent = user.username;
+  element('profile-wins').textContent = user.gamesWon;
+  element('profile-losses').textContent = user.gamesLost;
+  element('profile-draws').textContent = user.gamesDrawn || 0;
   element('account-summary').classList.remove('hidden');
 }
 
@@ -55,7 +60,7 @@ async function authenticate(endpoint) {
     element('auth-error').textContent = '';
     updateAccount(user);
     connectSocket();
-    showScreen('lobby');
+    showScreen('profile');
   } catch (error) {
     element('auth-error').textContent = error.message;
   }
@@ -74,6 +79,7 @@ element('btn-logout').addEventListener('click', async () => {
   currentUser = null;
   socket = null;
   currentGame = null;
+  selectedModeId = null;
   element('account-summary').classList.add('hidden');
   element('auth-form').reset();
   showScreen('auth');
@@ -83,9 +89,11 @@ function connectSocket() {
   if (socket) socket.disconnect();
   socket = io();
 
-  socket.on('connect', () => socket.emit('lobby:join'));
+  socket.on('connect', () => {
+    if (selectedModeId && !currentGame) socket.emit('lobby:join', { modeId: selectedModeId });
+  });
   socket.on('account:state', updateAccount);
-  socket.on('lobby:state', ({ players }) => renderLobby(players));
+  socket.on('lobby:state', renderLobby);
   socket.on('game:started', receiveGameState);
   socket.on('game:state', receiveGameState);
   socket.on('game:actionAccepted', (state) => {
@@ -107,46 +115,66 @@ function connectSocket() {
       : 'The game ended in a draw.';
     element('finished-banner').classList.remove('hidden');
   });
-  socket.on('game:closed', returnToLobby);
+  socket.on('game:closed', returnToProfile);
   socket.on('server:error', ({ message }) => showToast(message));
 }
 
-function renderLobby(players) {
+function renderLobby({ mode, players }) {
+  selectedModeId = mode.id;
+  element('lobby-mode-label').textContent = mode.label;
+  element('lobby-mode-description').textContent = `${mode.startingMonsterCount} monsters of each type. Elimination after ${mode.eliminationThreshold} removed monsters.`;
   const list = element('lobby-players');
   list.replaceChildren();
 
   players.forEach((player) => {
     const item = document.createElement('li');
     const name = document.createElement('strong');
+    const status = document.createElement('span');
 
     name.textContent = player.username;
-    item.append(name);
+    status.textContent = player.ready ? 'Ready' : 'Not ready';
+    item.append(name, status);
     list.appendChild(item);
   });
 
-  element('btn-start').disabled = players.length < 2;
+  const currentLobbyPlayer = players.find((player) => player.userId === currentUser.userId);
+  element('btn-start').disabled = !currentLobbyPlayer || currentLobbyPlayer.ready;
+  element('btn-start').textContent = currentLobbyPlayer?.ready
+    ? 'Waiting for other players'
+    : 'Start match';
 }
 
-element('btn-start').addEventListener('click', () => socket.emit('lobby:start'));
+document.querySelectorAll('.mode-button').forEach((button) => {
+  button.addEventListener('click', () => {
+    selectedModeId = button.dataset.mode;
+    socket.emit('lobby:join', { modeId: selectedModeId });
+    showScreen('lobby');
+  });
+});
+
+element('btn-start').addEventListener('click', () => socket.emit('lobby:ready'));
+element('btn-change-mode').addEventListener('click', returnToProfile);
 element('btn-close-game').addEventListener('click', () => socket.emit('game:close'));
-element('btn-return-lobby').addEventListener('click', returnToLobby);
+element('btn-return-lobby').addEventListener('click', returnToProfile);
 element('btn-skip-turn').addEventListener('click', () => {
   if (currentGame) socket.emit('game:skipTurn', { gameId: currentGame.id });
 });
 
-function returnToLobby() {
+function returnToProfile() {
   currentGame = null;
+  if (socket?.connected) socket.emit('lobby:leave');
+  selectedModeId = null;
   privateTurnState = null;
   selectedMonsterId = null;
   placingType = null;
   element('finished-banner').classList.add('hidden');
-  showScreen('lobby');
-  if (socket?.connected) socket.emit('lobby:join');
+  showScreen('profile');
 }
 
 function receiveGameState(state) {
   const isNewRound = !currentGame || currentGame.roundNumber !== state.roundNumber;
   currentGame = state;
+  selectedModeId = state.mode.id;
   clockOffset = state.serverTime - Date.now();
 
   if (isNewRound) {
@@ -163,6 +191,7 @@ function receiveGameState(state) {
   renderGameStatus();
   renderControls();
   renderRoundLog();
+  element('rule-elimination-threshold').textContent = state.mode.eliminationThreshold;
   updateTimer();
 }
 
@@ -172,7 +201,7 @@ function currentPlayer() {
 
 function renderGameStatus() {
   const player = currentPlayer();
-  element('round-label').textContent = `Round ${currentGame.roundNumber}`;
+  element('round-label').textContent = `${currentGame.mode.label} - Round ${currentGame.roundNumber}`;
 
   if (currentGame.status === 'finished') {
     element('game-status').textContent = 'Game finished';
@@ -346,7 +375,7 @@ function renderPlayers() {
     if (!player.connected) turnState = 'disconnected';
     if (player.eliminated) turnState = player.result || 'eliminated';
     if (player.result === 'win') turnState = 'winner';
-    state.textContent = `${player.removedCount}/10 removed - ${player.consecutiveSkips}/5 skips - ${turnState}`;
+    state.textContent = `${player.removedCount}/${currentGame.mode.eliminationThreshold} removed - ${player.consecutiveSkips}/5 skips - ${turnState}`;
     resources.className = 'player-resources';
 
     const reserves = player.userId === currentUser.userId && privateTurnState
@@ -476,7 +505,7 @@ async function initialize() {
     if (!response.ok) throw new Error();
     updateAccount(await response.json());
     connectSocket();
-    showScreen('lobby');
+    showScreen('profile');
   } catch {
     showScreen('auth');
   }
