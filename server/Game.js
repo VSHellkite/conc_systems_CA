@@ -1,10 +1,11 @@
 'use strict';
 
 const { Board } = require('./Board');
-const { resolveCombat } = require('./Monster');
+const { resolveCellCombat } = require('./Monster');
 const { Player } = require('./Player');
 const {
   ELIMINATION_THRESHOLD,
+  INACTIVITY_ELIMINATION_THRESHOLD,
   REVEAL_DURATION_MS,
   ROUND_DURATION_MS,
   toCoordinate,
@@ -25,14 +26,19 @@ class Game {
     this.revealEndsAt = null;
     this.winnerId = null;
     this.actionLog = [];
+    this.pendingActions = [];
     this.lastResolution = null;
     this.players = joiningUsers.map((user, index) => {
       const player = new Player(user, index + 1);
       player.socketId = user.socketId;
       player.gamesWon = user.gamesWon;
       player.gamesLost = user.gamesLost;
+      player.gamesDrawn = user.gamesDrawn || 0;
       player.connected = true;
       player.eliminated = false;
+      player.consecutiveSkips = 0;
+      player.roundOutcome = null;
+      player.result = null;
       player.hasEndedTurn = false;
       player.hasActedThisRound = false;
       player.privatePreview = null;
@@ -67,12 +73,6 @@ class Game {
 
     const monster = player.createMonster(type, row, column);
 
-    if (occupant) {
-      this.settleCombat(player, monster, occupant, row, column);
-    } else {
-      this.board.placeMonster(monster);
-    }
-
     this.actionLog.push({
       kind: 'deployment',
       username: player.username,
@@ -80,7 +80,12 @@ class Game {
       coordinate: toCoordinate(row, column),
     });
 
-    this.completePlayerAction(player, {
+    const action = {
+      kind: 'deployment',
+      monster,
+      destination: { row, column },
+    };
+    this.completePlayerAction(player, action, {
       kind: 'deployment',
       monster: {
         id: monster.id,
@@ -101,16 +106,12 @@ class Game {
     if (monster.isNew) throw new Error('A newly deployed monster cannot move this round.');
     if (monster.hasMoved) throw new Error('This monster has already moved this round.');
 
+    const validation = this.board.validateMove(monster, destinationRow, destinationColumn);
+    if (!validation.legal) throw new Error(validation.reason);
+
     const originRow = monster.row;
     const originColumn = monster.column;
     const origin = toCoordinate(originRow, originColumn);
-    const occupant = this.board.moveMonster(monster, destinationRow, destinationColumn);
-    monster.hasMoved = true;
-
-    if (occupant) {
-      this.settleCombat(player, monster, occupant, destinationRow, destinationColumn);
-    }
-
     this.actionLog.push({
       kind: 'movement',
       username: player.username,
@@ -119,7 +120,13 @@ class Game {
       coordinate: toCoordinate(destinationRow, destinationColumn),
     });
 
-    this.completePlayerAction(player, {
+    const action = {
+      kind: 'movement',
+      monster,
+      origin: { row: originRow, column: originColumn },
+      destination: { row: destinationRow, column: destinationColumn },
+    };
+    this.completePlayerAction(player, action, {
       kind: 'movement',
       monster: {
         id: monster.id,
@@ -139,22 +146,13 @@ class Game {
     return this.getPrivateTurnState(userId);
   }
 
-  completePlayerAction(player, privatePreview, now = Date.now()) {
+  completePlayerAction(player, action, privatePreview, now = Date.now()) {
+    this.pendingActions.push(action);
     player.hasActedThisRound = true;
     player.hasEndedTurn = true;
     player.privatePreview = privatePreview;
+    player.roundOutcome = 'action';
     this.resolveIfReady(now);
-  }
-
-  settleCombat(movingPlayer, movingMonster, occupant, row, column) {
-    const result = resolveCombat(movingMonster, occupant);
-
-    for (const defeatedMonster of result.defeated) {
-      const owner = this.getPlayer(defeatedMonster.ownerId);
-      owner.removeMonster(defeatedMonster.id);
-    }
-
-    this.board.setCell(row, column, result.survivor);
   }
 
   skipTurn(userId, now = Date.now()) {
@@ -162,6 +160,7 @@ class Game {
     player.hasActedThisRound = true;
     player.hasEndedTurn = true;
     player.privatePreview = null;
+    player.roundOutcome = 'skip';
     this.resolveIfReady(now);
     return this.getPrivateTurnState(userId);
   }
@@ -181,10 +180,11 @@ class Game {
     if (this.status !== 'active' || this.phase !== 'planning') return false;
 
     for (const player of this.players) {
-      if (!player.eliminated) {
+      if (!player.eliminated && !player.hasEndedTurn) {
         player.hasActedThisRound = true;
         player.hasEndedTurn = true;
         player.privatePreview = null;
+        player.roundOutcome = 'timeout';
       }
     }
 
@@ -198,22 +198,75 @@ class Game {
     this.phase = 'reveal';
     this.roundEndsAt = null;
     this.revealEndsAt = now + REVEAL_DURATION_MS;
-    this.removeEliminatedPlayers();
+    this.applyPendingActions();
+    this.applyRoundOutcomes();
+    const eliminations = this.removeEliminatedPlayers();
     this.lastResolution = {
       roundNumber: this.roundNumber,
       reason,
       actions: this.actionLog.map((action) => ({ ...action })),
+      eliminations,
     };
     this.captureVisibleState();
     return true;
   }
 
-  removeEliminatedPlayers() {
+  applyPendingActions() {
+    const arrivals = new Map();
+
+    for (const action of this.pendingActions) {
+      if (action.kind === 'movement') this.board.removeMonster(action.monster);
+    }
+
+    for (const action of this.pendingActions) {
+      const { monster, destination } = action;
+      const key = `${destination.row}:${destination.column}`;
+      monster.row = destination.row;
+      monster.column = destination.column;
+      if (action.kind === 'movement') monster.hasMoved = true;
+      if (!arrivals.has(key)) arrivals.set(key, []);
+      arrivals.get(key).push(monster);
+    }
+
+    for (const [key, arrivingMonsters] of arrivals) {
+      const [row, column] = key.split(':').map(Number);
+      const occupant = this.board.getCell(row, column);
+      const contenders = occupant ? [occupant, ...arrivingMonsters] : arrivingMonsters;
+      const result = resolveCellCombat(contenders);
+
+      for (const defeatedMonster of result.defeated) {
+        this.getPlayer(defeatedMonster.ownerId).removeMonster(defeatedMonster.id);
+      }
+
+      this.board.setCell(row, column, result.survivor);
+    }
+  }
+
+  applyRoundOutcomes() {
     for (const player of this.players) {
-      if (player.eliminated || player.removedCount < ELIMINATION_THRESHOLD) continue;
+      if (player.eliminated) continue;
+
+      if (player.roundOutcome === 'action') player.consecutiveSkips = 0;
+      else if (player.roundOutcome === 'skip' || player.roundOutcome === 'timeout') {
+        player.consecutiveSkips += 1;
+      }
+    }
+  }
+
+  removeEliminatedPlayers() {
+    const newlyEliminated = [];
+
+    for (const player of this.players) {
+      const lostByMonsters = player.removedCount >= ELIMINATION_THRESHOLD;
+      const lostByInactivity = player.consecutiveSkips >= INACTIVITY_ELIMINATION_THRESHOLD;
+      if (player.eliminated || (!lostByMonsters && !lostByInactivity)) continue;
 
       player.eliminated = true;
       player.hasEndedTurn = true;
+      newlyEliminated.push({
+        player,
+        reason: lostByInactivity ? 'inactivity' : 'monsters',
+      });
 
       for (const monster of player.monsters.values()) {
         this.board.removeMonster(monster);
@@ -222,11 +275,22 @@ class Game {
       player.monsters.clear();
     }
 
+    const eliminationResult = newlyEliminated.length > 1 ? 'draw' : 'loss';
+    for (const { player } of newlyEliminated) player.result = eliminationResult;
+
     const survivors = this.players.filter((player) => !player.eliminated);
     if (survivors.length <= 1) {
       this.status = 'finished';
       this.winnerId = survivors[0]?.userId || null;
+      if (survivors[0]) survivors[0].result = 'win';
     }
+
+    return newlyEliminated.map(({ player, reason }) => ({
+      userId: player.userId,
+      username: player.username,
+      reason,
+      result: player.result,
+    }));
   }
 
   startNextRound(now = Date.now()) {
@@ -237,12 +301,14 @@ class Game {
     this.roundEndsAt = now + ROUND_DURATION_MS;
     this.revealEndsAt = null;
     this.actionLog = [];
+    this.pendingActions = [];
     this.lastResolution = null;
 
     for (const player of this.players) {
       player.hasEndedTurn = player.eliminated;
       player.hasActedThisRound = false;
       player.privatePreview = null;
+      player.roundOutcome = null;
 
       for (const monster of player.monsters.values()) {
         monster.hasMoved = false;
@@ -263,6 +329,7 @@ class Game {
       player.hasActedThisRound = true;
       player.hasEndedTurn = true;
       player.privatePreview = null;
+      player.roundOutcome = 'skip';
       this.resolveIfReady(now);
     }
 
@@ -285,6 +352,8 @@ class Game {
       removedCount: player.removedCount,
       monsterCount: player.monsters.size,
       eliminated: player.eliminated,
+      consecutiveSkips: player.consecutiveSkips,
+      result: player.result,
     }]));
   }
 
@@ -320,6 +389,8 @@ class Game {
             removedCount: player.removedCount,
             monsterCount: player.monsters.size,
             eliminated: player.eliminated,
+            consecutiveSkips: player.consecutiveSkips,
+            result: player.result,
           }
           : this.visiblePlayers.get(player.userId);
 
@@ -332,6 +403,7 @@ class Game {
           color: player.color,
           gamesWon: player.gamesWon,
           gamesLost: player.gamesLost,
+          gamesDrawn: player.gamesDrawn,
           connected: player.connected,
           hasEndedTurn: player.hasEndedTurn,
           hasActedThisRound: player.hasActedThisRound,
@@ -339,6 +411,8 @@ class Game {
           removedCount: visible.removedCount,
           monsterCount: visible.monsterCount,
           eliminated: visible.eliminated,
+          consecutiveSkips: visible.consecutiveSkips,
+          result: visible.result,
         };
       }),
     };

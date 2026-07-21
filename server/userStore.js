@@ -47,6 +47,7 @@ class UserStore {
       username: record.username,
       gamesWon: record.gamesWon,
       gamesLost: record.gamesLost,
+      gamesDrawn: record.gamesDrawn || 0,
     };
   }
 
@@ -69,6 +70,7 @@ class UserStore {
       passwordHash: await bcrypt.hash(password, 10),
       gamesWon: 0,
       gamesLost: 0,
+      gamesDrawn: 0,
     };
 
     this.users.set(userId, record);
@@ -92,12 +94,18 @@ class UserStore {
     return record ? this.toPublicUser(userId, record) : null;
   }
 
-  async recordResult(userId, won) {
+  async recordResult(userId, outcome) {
     const record = this.users.get(userId);
     if (!record) return null;
 
-    if (won) record.gamesWon += 1;
-    else record.gamesLost += 1;
+    const result = outcome === true ? 'win' : outcome === false ? 'loss' : outcome;
+    if (!['win', 'loss', 'draw'].includes(result)) {
+      throw new TypeError('A game result must be win, loss, or draw.');
+    }
+
+    if (result === 'win') record.gamesWon += 1;
+    if (result === 'loss') record.gamesLost += 1;
+    if (result === 'draw') record.gamesDrawn = (record.gamesDrawn || 0) + 1;
 
     await this.persist();
     return this.toPublicUser(userId, record);

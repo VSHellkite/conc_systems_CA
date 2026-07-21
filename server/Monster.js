@@ -34,4 +34,23 @@ function resolveCombat(firstMonster, secondMonster) {
   return { survivor: secondMonster, defeated: [firstMonster] };
 }
 
-module.exports = { Monster, resolveCombat };
+function resolveCellCombat(monsters) {
+  if (monsters.length === 0) return { survivor: null, defeated: [] };
+  if (monsters.length === 1) return { survivor: monsters[0], defeated: [] };
+
+  const possibleSurvivors = monsters.filter((monster) => !monsters.some(
+    (opponent) => opponent !== monster && BEATS[opponent.type] === monster.type,
+  ));
+
+  if (possibleSurvivors.length === 1) {
+    const survivor = possibleSurvivors[0];
+    return {
+      survivor,
+      defeated: monsters.filter((monster) => monster !== survivor),
+    };
+  }
+
+  return { survivor: null, defeated: [...monsters] };
+}
+
+module.exports = { Monster, resolveCellCombat, resolveCombat };

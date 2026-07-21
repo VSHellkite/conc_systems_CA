@@ -344,8 +344,9 @@ function renderPlayers() {
       turnState = 'ready';
     }
     if (!player.connected) turnState = 'disconnected';
-    if (player.eliminated) turnState = 'eliminated';
-    state.textContent = `${player.removedCount}/10 removed - ${turnState}`;
+    if (player.eliminated) turnState = player.result || 'eliminated';
+    if (player.result === 'win') turnState = 'winner';
+    state.textContent = `${player.removedCount}/10 removed - ${player.consecutiveSkips}/5 skips - ${turnState}`;
     resources.className = 'player-resources';
 
     const reserves = player.userId === currentUser.userId && privateTurnState
@@ -395,7 +396,16 @@ function renderRoundLog() {
     list.appendChild(item);
   });
 
-  if (resolution.actions.length === 0) {
+  (resolution.eliminations || []).forEach((elimination) => {
+    const item = document.createElement('li');
+    const cause = elimination.reason === 'inactivity'
+      ? 'five consecutive skipped turns'
+      : 'ten removed monsters';
+    item.textContent = `${elimination.username} was eliminated by ${cause} (${elimination.result}).`;
+    list.appendChild(item);
+  });
+
+  if (resolution.actions.length === 0 && (resolution.eliminations || []).length === 0) {
     const item = document.createElement('li');
     item.textContent = 'No actions were submitted.';
     list.appendChild(item);

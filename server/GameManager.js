@@ -46,6 +46,7 @@ class GameManager {
         username: player.username,
         gamesWon: player.gamesWon,
         gamesLost: player.gamesLost,
+        gamesDrawn: player.gamesDrawn || 0,
       })),
     });
   }
@@ -158,10 +159,17 @@ class GameManager {
     game.finishProcessed = true;
 
     for (const player of game.players) {
-      const updatedUser = await userStore.recordResult(player.userId, player.userId === game.winnerId);
+      const fallbackResult = game.winnerId
+        ? (player.userId === game.winnerId ? 'win' : 'loss')
+        : 'draw';
+      const updatedUser = await userStore.recordResult(
+        player.userId,
+        player.result || fallbackResult,
+      );
       if (updatedUser) {
         player.gamesWon = updatedUser.gamesWon;
         player.gamesLost = updatedUser.gamesLost;
+        player.gamesDrawn = updatedUser.gamesDrawn;
         const socket = this.getSocket(player.socketId);
         if (socket) socket.emit('account:state', updatedUser);
       }
