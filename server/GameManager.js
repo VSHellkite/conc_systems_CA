@@ -99,9 +99,10 @@ class GameManager {
     await this.publishGame(game);
   }
 
-  async endTurn(userId, gameId) {
+  async skipTurn(userId, gameId) {
     const game = this.requireGame(userId, gameId);
-    game.endTurn(userId);
+    const privateState = game.skipTurn(userId);
+    this.emitActionAccepted(game, userId, privateState);
     await this.publishGame(game);
   }
 

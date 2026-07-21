@@ -372,6 +372,11 @@ h2 {
   outline-offset: -4px;
 }
 
+.board-cell.planned-action {
+  outline: 4px dashed #f7c85c;
+  outline-offset: -4px;
+}
+
 .game-controls {
   display: flex;
   align-items: end;

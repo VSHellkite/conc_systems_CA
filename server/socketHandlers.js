@@ -16,7 +16,10 @@ function registerSocketHandlers(io, gameManager) {
     socket.emit('account:state', user);
 
     const game = gameManager.reconnect(userId, socket.id);
-    if (game) socket.emit('game:started', game.getPublicState());
+    if (game) {
+      socket.emit('game:started', game.getPublicState());
+      socket.emit('game:actionAccepted', game.getPrivateTurnState(userId));
+    }
 
     socket.on('lobby:join', () => {
       if (gameManager.userGameIndex.has(userId)) return;
@@ -48,9 +51,9 @@ function registerSocketHandlers(io, gameManager) {
       }
     });
 
-    socket.on('game:endTurn', async ({ gameId } = {}) => {
+    socket.on('game:skipTurn', async ({ gameId } = {}) => {
       try {
-        await gameManager.endTurn(userId, gameId);
+        await gameManager.skipTurn(userId, gameId);
       } catch (error) {
         socket.emit('server:error', { message: error.message });
       }

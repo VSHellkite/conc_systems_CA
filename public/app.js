@@ -92,7 +92,12 @@ function connectSocket() {
     privateTurnState = state;
     placingType = null;
     selectedMonsterId = null;
-    element('action-status').textContent = 'Action accepted and hidden until the reveal.';
+    element('action-status').textContent = state.preview
+      ? 'Your action is visible only to you until the reveal.'
+      : 'You skipped this round.';
+    renderBoard();
+    renderPlayers();
+    renderGameStatus();
     renderControls();
   });
   socket.on('game:finished', (state) => {
@@ -125,8 +130,8 @@ function renderLobby(players) {
 element('btn-start').addEventListener('click', () => socket.emit('lobby:start'));
 element('btn-close-game').addEventListener('click', () => socket.emit('game:close'));
 element('btn-return-lobby').addEventListener('click', returnToLobby);
-element('btn-end-turn').addEventListener('click', () => {
-  if (currentGame) socket.emit('game:endTurn', { gameId: currentGame.id });
+element('btn-skip-turn').addEventListener('click', () => {
+  if (currentGame) socket.emit('game:skipTurn', { gameId: currentGame.id });
 });
 
 function returnToLobby() {
@@ -150,6 +155,8 @@ function receiveGameState(state) {
     placingType = null;
   }
 
+  if (state.phase !== 'planning') privateTurnState = null;
+
   showScreen('game');
   renderBoard();
   renderPlayers();
@@ -172,9 +179,11 @@ function renderGameStatus() {
   } else if (currentGame.phase === 'reveal') {
     element('game-status').textContent = 'Revealing all actions';
     element('action-status').textContent = 'The next round will begin shortly.';
-  } else if (player?.hasEndedTurn) {
+  } else if (player?.hasEndedTurn || privateTurnState?.hasActedThisRound) {
     element('game-status').textContent = 'Waiting for other players';
-    element('action-status').textContent = 'Your turn is locked.';
+    element('action-status').textContent = privateTurnState?.preview
+      ? 'Your action is visible only to you until the reveal.'
+      : 'Your turn is locked.';
   } else {
     element('game-status').textContent = 'Plan your actions';
     element('action-status').textContent = 'Your actions remain hidden until the round ends.';
@@ -188,7 +197,7 @@ function renderControls() {
     || currentGame.status !== 'active'
     || player?.hasEndedTurn
     || player?.eliminated;
-  const hasPlaced = privateTurnState?.hasPlacedThisRound || false;
+  const hasActed = privateTurnState?.hasActedThisRound || false;
   const reserves = privateTurnState?.reserves || player.reserves;
   const controls = element('placement-controls');
 
@@ -203,7 +212,7 @@ function renderControls() {
     button.type = 'button';
     button.className = 'monster-button';
     button.dataset.type = type;
-    button.disabled = locked || hasPlaced || reserves[type] === 0;
+    button.disabled = locked || hasActed || reserves[type] === 0;
     button.classList.toggle('active', placingType === type);
     image.src = spritePath(type, player.number);
     image.alt = '';
@@ -218,7 +227,7 @@ function renderControls() {
     controls.appendChild(button);
   }
 
-  element('btn-end-turn').disabled = locked;
+  element('btn-skip-turn').disabled = locked || hasActed;
 }
 
 function spritePath(type, playerNumber) {
@@ -229,9 +238,10 @@ function renderBoard() {
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let column = 0; column < BOARD_SIZE; column += 1) {
       const button = boardCells[row][column];
-      const cell = currentGame.board[row][column];
+      const cell = displayedCell(row, column);
       button.querySelector('.monster-sprite')?.remove();
       button.classList.remove('selected-monster');
+      button.classList.remove('planned-action');
 
       if (!cell) continue;
 
@@ -243,9 +253,35 @@ function renderBoard() {
       sprite.title = sprite.alt;
       button.appendChild(sprite);
 
+      const destination = privateTurnState?.preview?.destination;
+      if (
+        currentGame.phase === 'planning'
+        && destination?.row === row
+        && destination?.column === column
+      ) {
+        button.classList.add('planned-action');
+      }
+
       if (cell.id === selectedMonsterId) button.classList.add('selected-monster');
     }
   }
+}
+
+function displayedCell(row, column) {
+  const preview = currentGame.phase === 'planning' ? privateTurnState?.preview : null;
+  if (!preview) return currentGame.board[row][column];
+
+  if (preview.kind === 'movement'
+    && preview.origin.row === row
+    && preview.origin.column === column) {
+    return null;
+  }
+
+  if (preview.destination.row === row && preview.destination.column === column) {
+    return preview.monster;
+  }
+
+  return currentGame.board[row][column];
 }
 
 function onBoardCellClick(row, column) {
@@ -255,6 +291,7 @@ function onBoardCellClick(row, column) {
     || currentGame.phase !== 'planning'
     || currentGame.status !== 'active'
     || player?.hasEndedTurn
+    || privateTurnState?.hasActedThisRound
   ) return;
 
   const cell = currentGame.board[row][column];
@@ -270,11 +307,6 @@ function onBoardCellClick(row, column) {
   }
 
   if (cell?.ownerId === currentUser.userId) {
-    if (privateTurnState?.movedMonsterIds.includes(cell.id)) {
-      showToast('This monster has already moved this round.');
-      return;
-    }
-
     selectedMonsterId = selectedMonsterId === cell.id ? null : cell.id;
     renderBoard();
     return;
@@ -308,6 +340,9 @@ function renderPlayers() {
     name.textContent = player.username;
 
     let turnState = player.hasEndedTurn ? 'ready' : 'planning';
+    if (player.userId === currentUser.userId && privateTurnState?.hasActedThisRound) {
+      turnState = 'ready';
+    }
     if (!player.connected) turnState = 'disconnected';
     if (player.eliminated) turnState = 'eliminated';
     state.textContent = `${player.removedCount}/10 removed - ${turnState}`;
