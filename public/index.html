@@ -98,19 +98,19 @@
       <div class="game-layout">
         <section class="board-card">
           <div class="board-scroll">
-            <div class="gothic-frame" aria-label="Gothic game board frame">
-              <img src="/assets/ui/Frame/top-left.png" alt="">
-              <img src="/assets/ui/Frame/top.png" alt="">
-              <img src="/assets/ui/Frame/top-right.png" alt="">
-              <img src="/assets/ui/Frame/left.png" alt="">
+            <div id="game-frame" class="gothic-frame" aria-label="Gothic game board frame">
+              <img data-frame-part="top-left" src="/assets/ui/Frame/top-left.png" alt="">
+              <img data-frame-part="top" src="/assets/ui/Frame/top.png" alt="">
+              <img data-frame-part="top-right" src="/assets/ui/Frame/top-right.png" alt="">
+              <img data-frame-part="left" src="/assets/ui/Frame/left.png" alt="">
               <div class="board-mat">
                 <img class="frame-center" src="/assets/ui/Frame/center.png" alt="">
                 <div id="board" class="board" aria-label="10 by 10 game board"></div>
               </div>
-              <img src="/assets/ui/Frame/right.png" alt="">
-              <img src="/assets/ui/Frame/bottom-left.png" alt="">
-              <img src="/assets/ui/Frame/bottom.png" alt="">
-              <img src="/assets/ui/Frame/bottom-right.png" alt="">
+              <img data-frame-part="right" src="/assets/ui/Frame/right.png" alt="">
+              <img data-frame-part="bottom-left" src="/assets/ui/Frame/bottom-left.png" alt="">
+              <img data-frame-part="bottom" src="/assets/ui/Frame/bottom.png" alt="">
+              <img data-frame-part="bottom-right" src="/assets/ui/Frame/bottom-right.png" alt="">
             </div>
           </div>
           <div class="game-controls">
@@ -131,17 +131,27 @@
 
           <section class="rules-card">
             <h2>Game rules</h2>
-            <ul class="rules-list">
-              <li><strong>Ghost</strong> defeats Vampire.</li>
-              <li><strong>Vampire</strong> defeats Werewolf.</li>
-              <li><strong>Werewolf</strong> defeats Ghost.</li>
-              <li>Matching monsters remove each other.</li>
-              <li>If all three monster types meet, all of them are removed.</li>
-              <li>Each player may deploy, move, or skip once per round.</li>
-              <li>Move straight any distance or diagonally up to two cells.</li>
-              <li>Lose <span id="rule-elimination-threshold">10</span> monsters and you are eliminated.</li>
-              <li>Skip five consecutive turns and you are eliminated.</li>
-            </ul>
+            <div class="rules-segment combat-rules">
+              <h3>Monster combat</h3>
+              <img
+                class="combat-cycle"
+                src="/assets/ui/combat-cycle-player1.png"
+                alt="Ghost defeats Vampire, Vampire defeats Werewolf, Werewolf defeats Ghost"
+              >
+              <ul class="rules-list">
+                <li>Matching monsters remove each other.</li>
+                <li>If all three monster types meet, all of them are removed.</li>
+              </ul>
+            </div>
+            <div class="rules-segment">
+              <h3>Match rules</h3>
+              <ul class="rules-list">
+                <li>Each player may deploy, move, or skip once per round.</li>
+                <li>Move straight any distance or diagonally up to two cells.</li>
+                <li>Lose <span id="rule-elimination-threshold">10</span> monsters and you are eliminated.</li>
+                <li>Skip five consecutive turns and you are eliminated.</li>
+              </ul>
+            </div>
           </section>
         </aside>
       </div>
@@ -152,11 +162,12 @@
   <div id="finished-banner" class="finished-banner hidden">
     <div>
       <h2 id="finished-message"></h2>
-      <button id="btn-return-lobby" class="primary-button">Choose another mode</button>
+      <button id="btn-return-lobby" class="primary-button">GG</button>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/boardRules.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -186,6 +186,7 @@ function receiveGameState(state) {
   if (state.phase !== 'planning') privateTurnState = null;
 
   showScreen('game');
+  renderPlayerFrame();
   renderBoard();
   renderPlayers();
   renderGameStatus();
@@ -252,6 +253,7 @@ function renderControls() {
       placingType = placingType === type ? null : type;
       selectedMonsterId = null;
       renderControls();
+      renderBoard();
     });
     controls.appendChild(button);
   }
@@ -263,7 +265,60 @@ function spritePath(type, playerNumber) {
   return `/assets/${type}${playerNumber}_64x64.png`;
 }
 
+function renderPlayerFrame() {
+  const player = currentPlayer();
+  if (!player) return;
+
+  element('screen-game').style.setProperty('--active-player-color', player.color);
+  element('game-frame').dataset.player = player.number;
+  document.querySelectorAll('[data-frame-part]').forEach((image) => {
+    image.src = `/assets/ui/Frame/${image.dataset.framePart}${player.number}.png`;
+  });
+}
+
+function findMonsterPosition(monsterId) {
+  for (let row = 0; row < BOARD_SIZE; row += 1) {
+    for (let column = 0; column < BOARD_SIZE; column += 1) {
+      if (currentGame.board[row][column]?.id === monsterId) return { row, column };
+    }
+  }
+  return null;
+}
+
+function positionSet(positions) {
+  return new Set(positions.map(({ row, column }) => `${row}:${column}`));
+}
+
+function highlightedPositions() {
+  const player = currentPlayer();
+  if (!player || currentGame.phase !== 'planning' || player.hasEndedTurn) {
+    return { placements: new Set(), movements: new Set() };
+  }
+
+  if (placingType) {
+    return {
+      placements: positionSet(boardRules.getLegalDeploymentPositions(currentGame.board, player)),
+      movements: new Set(),
+    };
+  }
+
+  const origin = selectedMonsterId ? findMonsterPosition(selectedMonsterId) : null;
+  return {
+    placements: new Set(),
+    movements: origin
+      ? positionSet(boardRules.getLegalMovementPositions(
+        currentGame.board,
+        player.userId,
+        origin.row,
+        origin.column,
+      ))
+      : new Set(),
+  };
+}
+
 function renderBoard() {
+  const highlights = highlightedPositions();
+
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let column = 0; column < BOARD_SIZE; column += 1) {
       const button = boardCells[row][column];
@@ -271,6 +326,12 @@ function renderBoard() {
       button.querySelector('.monster-sprite')?.remove();
       button.classList.remove('selected-monster');
       button.classList.remove('planned-action');
+      button.classList.remove('legal-placement');
+      button.classList.remove('legal-move');
+
+      const positionKey = `${row}:${column}`;
+      if (highlights.placements.has(positionKey)) button.classList.add('legal-placement');
+      if (highlights.movements.has(positionKey)) button.classList.add('legal-move');
 
       if (!cell) continue;
 
@@ -325,7 +386,16 @@ function onBoardCellClick(row, column) {
 
   const cell = currentGame.board[row][column];
 
+  if (cell?.ownerId === currentUser.userId) {
+    placingType = null;
+    selectedMonsterId = selectedMonsterId === cell.id ? null : cell.id;
+    renderControls();
+    renderBoard();
+    return;
+  }
+
   if (placingType) {
+    if (!boardRules.isLegalDeployment(currentGame.board, player, row, column)) return;
     socket.emit('game:placeMonster', {
       gameId: currentGame.id,
       type: placingType,
@@ -335,13 +405,17 @@ function onBoardCellClick(row, column) {
     return;
   }
 
-  if (cell?.ownerId === currentUser.userId) {
-    selectedMonsterId = selectedMonsterId === cell.id ? null : cell.id;
-    renderBoard();
-    return;
-  }
-
   if (selectedMonsterId) {
+    const origin = findMonsterPosition(selectedMonsterId);
+    if (!origin || !boardRules.isLegalMovement(
+      currentGame.board,
+      player.userId,
+      origin.row,
+      origin.column,
+      row,
+      column,
+    )) return;
+
     socket.emit('game:moveMonster', {
       gameId: currentGame.id,
       monsterId: selectedMonsterId,
