@@ -13,28 +13,76 @@
       <span class="brand-mark">MM</span>
       <span>Monster Mayhem</span>
     </div>
+    <div id="account-summary" class="account-summary hidden">
+      <strong id="header-username"></strong>
+      <span>Wins: <b id="stat-wins">0</b></span>
+      <span>Losses: <b id="stat-losses">0</b></span>
+      <button id="btn-logout" class="small-button">Log out</button>
+    </div>
   </header>
 
   <main class="page-shell">
-    <section class="board-card">
-      <div class="board-heading">
-        <div>
-          <p class="eyebrow">Battlefield</p>
-          <h1>10 × 10 game board</h1>
-        </div>
-        <div class="zone-legend" aria-label="Player placement zones">
-          <span><i class="player-one"></i>Player 1</span>
-          <span><i class="player-two"></i>Player 2</span>
-          <span><i class="player-three"></i>Player 3</span>
-          <span><i class="player-four"></i>Player 4</span>
-        </div>
+    <section id="screen-auth" class="screen auth-screen">
+      <div class="auth-card">
+        <p class="eyebrow">Multiplayer strategy</p>
+        <h1>Command your monsters</h1>
+        <p class="muted">Create an account or log in to enter the player lobby.</p>
+        <form id="auth-form" class="auth-form">
+          <label>
+            <span>Username</span>
+            <input id="auth-username" minlength="3" maxlength="24" autocomplete="username" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="auth-password" type="password" minlength="6" autocomplete="current-password" required>
+          </label>
+          <div class="button-row">
+            <button class="primary-button" type="submit">Log in</button>
+            <button id="btn-register" type="button">Create account</button>
+          </div>
+        </form>
+        <p id="auth-error" class="error-message" role="alert"></p>
       </div>
-      <div class="board-scroll">
-        <div id="board" class="board" aria-label="10 by 10 game board"></div>
+    </section>
+
+    <section id="screen-lobby" class="screen hidden">
+      <div class="lobby-card">
+        <p class="eyebrow">Matchmaking</p>
+        <h1>Player lobby</h1>
+        <p class="muted">A match needs 2–4 players and starts automatically when the fourth player joins.</p>
+        <ol id="lobby-players" class="lobby-list"></ol>
+        <button id="btn-start" class="primary-button" disabled>Start match</button>
+      </div>
+    </section>
+
+    <section id="screen-game" class="screen hidden">
+      <div class="match-heading">
+        <div>
+          <p class="eyebrow">Match created</p>
+          <h1>Battlefield</h1>
+          <p class="muted">Player connections and assignments are active.</p>
+        </div>
+        <button id="btn-close-match">Close match</button>
+      </div>
+
+      <div class="game-layout">
+        <section class="board-card">
+          <div class="board-scroll">
+            <div id="board" class="board" aria-label="10 by 10 game board"></div>
+          </div>
+        </section>
+
+        <aside class="players-card">
+          <h2>Players</h2>
+          <div id="match-players" class="match-players"></div>
+        </aside>
       </div>
     </section>
   </main>
 
+  <div id="toast" class="toast hidden" role="alert"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
