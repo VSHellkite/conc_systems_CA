@@ -3,6 +3,7 @@
 const { Board } = require('./Board');
 const { resolveCellCombat } = require('./Monster');
 const { Player } = require('./Player');
+const { resolveMovementDestinations } = require('./movementResolver');
 const {
   INACTIVITY_ELIMINATION_THRESHOLD,
   REVEAL_DURATION_MS,
@@ -32,9 +33,6 @@ class Game {
     this.players = joiningUsers.map((user, index) => {
       const player = new Player(user, index + 1, this.mode.startingMonsterCount);
       player.socketId = user.socketId;
-      player.gamesWon = user.gamesWon;
-      player.gamesLost = user.gamesLost;
-      player.gamesDrawn = user.gamesDrawn || 0;
       player.connected = true;
       player.eliminated = false;
       player.consecutiveSkips = 0;
@@ -107,25 +105,32 @@ class Game {
     if (monster.isNew) throw new Error('A newly deployed monster cannot move this round.');
     if (monster.hasMoved) throw new Error('This monster has already moved this round.');
 
-    const validation = this.board.validateMove(monster, destinationRow, destinationColumn);
+    const validation = this.board.validateMove(
+      monster,
+      destinationRow,
+      destinationColumn,
+      { allowBlockedPath: true },
+    );
     if (!validation.legal) throw new Error(validation.reason);
 
     const originRow = monster.row;
     const originColumn = monster.column;
     const origin = toCoordinate(originRow, originColumn);
-    this.actionLog.push({
+    const logEntry = {
       kind: 'movement',
       username: player.username,
       monsterType: monster.type,
       from: origin,
       coordinate: toCoordinate(destinationRow, destinationColumn),
-    });
+    };
+    this.actionLog.push(logEntry);
 
     const action = {
       kind: 'movement',
       monster,
       origin: { row: originRow, column: originColumn },
       destination: { row: destinationRow, column: destinationColumn },
+      logEntry,
     };
     this.completePlayerAction(player, action, {
       kind: 'movement',
@@ -214,17 +219,23 @@ class Game {
 
   applyPendingActions() {
     const arrivals = new Map();
+    const movementActions = this.pendingActions.filter((action) => action.kind === 'movement');
+    const resolvedDestinations = resolveMovementDestinations(this.board, movementActions);
+
+    for (const action of movementActions) this.board.removeMonster(action.monster);
 
     for (const action of this.pendingActions) {
-      if (action.kind === 'movement') this.board.removeMonster(action.monster);
-    }
-
-    for (const action of this.pendingActions) {
-      const { monster, destination } = action;
+      const { monster } = action;
+      const destination = action.kind === 'movement'
+        ? resolvedDestinations.get(action)
+        : action.destination;
       const key = `${destination.row}:${destination.column}`;
       monster.row = destination.row;
       monster.column = destination.column;
-      if (action.kind === 'movement') monster.hasMoved = true;
+      if (action.kind === 'movement') {
+        monster.hasMoved = true;
+        action.logEntry.coordinate = toCoordinate(destination.row, destination.column);
+      }
       if (!arrivals.has(key)) arrivals.set(key, []);
       arrivals.get(key).push(monster);
     }
@@ -326,7 +337,12 @@ class Game {
 
     player.connected = false;
 
-    if (this.status === 'active' && this.phase === 'planning' && !player.eliminated) {
+    if (
+      this.status === 'active'
+      && this.phase === 'planning'
+      && !player.eliminated
+      && !player.hasEndedTurn
+    ) {
       player.hasActedThisRound = true;
       player.hasEndedTurn = true;
       player.privatePreview = null;
@@ -351,7 +367,6 @@ class Game {
     this.visiblePlayers = new Map(this.players.map((player) => [player.userId, {
       reserves: { ...player.reserves },
       removedCount: player.removedCount,
-      monsterCount: player.monsters.size,
       eliminated: player.eliminated,
       consecutiveSkips: player.consecutiveSkips,
       result: player.result,
@@ -389,7 +404,6 @@ class Game {
           ? {
             reserves: player.reserves,
             removedCount: player.removedCount,
-            monsterCount: player.monsters.size,
             eliminated: player.eliminated,
             consecutiveSkips: player.consecutiveSkips,
             result: player.result,
@@ -403,15 +417,10 @@ class Game {
           edge: player.edge,
           colorName: player.colorName,
           color: player.color,
-          gamesWon: player.gamesWon,
-          gamesLost: player.gamesLost,
-          gamesDrawn: player.gamesDrawn,
           connected: player.connected,
           hasEndedTurn: player.hasEndedTurn,
-          hasActedThisRound: player.hasActedThisRound,
           reserves: { ...visible.reserves },
           removedCount: visible.removedCount,
-          monsterCount: visible.monsterCount,
           eliminated: visible.eliminated,
           consecutiveSkips: visible.consecutiveSkips,
           result: visible.result,

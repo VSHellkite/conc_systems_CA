@@ -63,14 +63,6 @@ class Player {
   ownsMonster(monsterId) {
     return this.monsters.has(monsterId);
   }
-
-  getSpritePath(type) {
-    if (!MONSTER_TYPES.includes(type)) {
-      throw new TypeError(`Unknown monster type: ${type}`);
-    }
-
-    return `/assets/${type}${this.number}_64x64.png`;
-  }
 }
 
 module.exports = { Player };

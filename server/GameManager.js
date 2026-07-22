@@ -75,9 +75,6 @@ class GameManager {
       players: this.lobbies.get(mode.id).map((player) => ({
         userId: player.userId,
         username: player.username,
-        gamesWon: player.gamesWon,
-        gamesLost: player.gamesLost,
-        gamesDrawn: player.gamesDrawn || 0,
         ready: player.ready,
       })),
     });
@@ -216,9 +213,6 @@ class GameManager {
         player.result || fallbackResult,
       );
       if (updatedUser) {
-        player.gamesWon = updatedUser.gamesWon;
-        player.gamesLost = updatedUser.gamesLost;
-        player.gamesDrawn = updatedUser.gamesDrawn;
         const socket = this.getSocket(player.socketId);
         if (socket) socket.emit('account:state', updatedUser);
       }
@@ -250,23 +244,6 @@ class GameManager {
 
     game.disconnectPlayer(userId);
     await this.publishGame(game);
-  }
-
-  closeGame(userId) {
-    const gameId = this.userGameIndex.get(userId);
-    const game = gameId ? this.games.get(gameId) : null;
-    if (!game) return;
-
-    this.io.to(gameRoom(game.id)).emit('game:closed');
-
-    for (const player of game.players) {
-      this.userGameIndex.delete(player.userId);
-      const socket = this.getSocket(player.socketId);
-      if (socket) socket.leave(gameRoom(game.id));
-    }
-
-    this.clearGameTimers(game.id);
-    this.games.delete(game.id);
   }
 
   clearGameTimers(gameId) {

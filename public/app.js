@@ -101,7 +101,7 @@ function connectSocket() {
     placingType = null;
     selectedMonsterId = null;
     element('action-status').textContent = state.preview
-      ? 'Your action is visible only to you until the reveal.'
+      ? 'Your planned destination is private. Final positions are resolved at the reveal.'
       : 'You skipped this round.';
     renderBoard();
     renderPlayers();
@@ -115,7 +115,6 @@ function connectSocket() {
       : 'The game ended in a draw.';
     element('finished-banner').classList.remove('hidden');
   });
-  socket.on('game:closed', returnToProfile);
   socket.on('server:error', ({ message }) => showToast(message));
 }
 
@@ -154,7 +153,6 @@ document.querySelectorAll('.mode-button').forEach((button) => {
 
 element('btn-start').addEventListener('click', () => socket.emit('lobby:ready'));
 element('btn-change-mode').addEventListener('click', returnToProfile);
-element('btn-close-game').addEventListener('click', () => socket.emit('game:close'));
 element('btn-return-lobby').addEventListener('click', returnToProfile);
 element('btn-skip-turn').addEventListener('click', () => {
   if (currentGame) socket.emit('game:skipTurn', { gameId: currentGame.id });
@@ -212,7 +210,7 @@ function renderGameStatus() {
   } else if (player?.hasEndedTurn || privateTurnState?.hasActedThisRound) {
     element('game-status').textContent = 'Waiting for other players';
     element('action-status').textContent = privateTurnState?.preview
-      ? 'Your action is visible only to you until the reveal.'
+      ? 'Your planned destination is private. Final positions are resolved at the reveal.'
       : 'Your turn is locked.';
   } else {
     element('game-status').textContent = 'Plan your actions';
@@ -503,7 +501,7 @@ function renderRoundLog() {
     const item = document.createElement('li');
     const cause = elimination.reason === 'inactivity'
       ? 'five consecutive skipped turns'
-      : 'ten removed monsters';
+      : `${currentGame.mode.eliminationThreshold} removed monsters`;
     item.textContent = `${elimination.username} was eliminated by ${cause} (${elimination.result}).`;
     list.appendChild(item);
   });

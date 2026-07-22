@@ -45,7 +45,7 @@ class Board {
     }
   }
 
-  validateMove(monster, destinationRow, destinationColumn) {
+  validateMove(monster, destinationRow, destinationColumn, options = {}) {
     if (!isValidPosition(destinationRow, destinationColumn)) {
       return { legal: false, reason: 'Destination is outside the board.' };
     }
@@ -76,15 +76,17 @@ class Board {
     const rowStep = Math.sign(rowDistance);
     const columnStep = Math.sign(columnDistance);
 
-    for (let step = 1; step < distance; step += 1) {
-      const occupant = this.grid[
-        monster.row + rowStep * step
-      ][
-        monster.column + columnStep * step
-      ];
+    if (!options.allowBlockedPath) {
+      for (let step = 1; step < distance; step += 1) {
+        const occupant = this.grid[
+          monster.row + rowStep * step
+        ][
+          monster.column + columnStep * step
+        ];
 
-      if (occupant && occupant.ownerId !== monster.ownerId) {
-        return { legal: false, reason: 'An enemy monster blocks the path.' };
+        if (occupant && occupant.ownerId !== monster.ownerId) {
+          return { legal: false, reason: 'An enemy monster blocks the path.' };
+        }
       }
     }
 

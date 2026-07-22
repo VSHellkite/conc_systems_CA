@@ -63,7 +63,6 @@ function registerSocketHandlers(io, gameManager) {
       }
     });
 
-    socket.on('game:close', () => gameManager.closeGame(userId));
     socket.on('disconnect', () => gameManager.disconnect(userId));
   });
 }

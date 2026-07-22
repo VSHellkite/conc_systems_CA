@@ -42,19 +42,6 @@
     if (!isStraight && !isDiagonal) return false;
     if (isDiagonal && Math.abs(rowDistance) > 2) return false;
 
-    const distance = Math.max(Math.abs(rowDistance), Math.abs(columnDistance));
-    const rowStep = Math.sign(rowDistance);
-    const columnStep = Math.sign(columnDistance);
-
-    for (let step = 1; step < distance; step += 1) {
-      const occupant = board[
-        originRow + rowStep * step
-      ][
-        originColumn + columnStep * step
-      ];
-      if (occupant && occupant.ownerId !== ownerId) return false;
-    }
-
     const destination = board[row][column];
     return !destination || destination.ownerId !== ownerId;
   }

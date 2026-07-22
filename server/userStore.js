@@ -54,11 +54,12 @@ class UserStore {
   async register(rawUsername, password) {
     const username = String(rawUsername || '').trim();
     const userId = username.toLowerCase();
+    const plainPassword = String(password || '');
 
     if (username.length < 3 || username.length > 24) {
       throw new Error('Username must contain between 3 and 24 characters.');
     }
-    if (String(password || '').length < 6) {
+    if (plainPassword.length < 6) {
       throw new Error('Password must contain at least 6 characters.');
     }
     if (this.users.has(userId)) {
@@ -67,7 +68,7 @@ class UserStore {
 
     const record = {
       username,
-      passwordHash: await bcrypt.hash(password, 10),
+      passwordHash: await bcrypt.hash(plainPassword, 10),
       gamesWon: 0,
       gamesLost: 0,
       gamesDrawn: 0,
@@ -98,14 +99,13 @@ class UserStore {
     const record = this.users.get(userId);
     if (!record) return null;
 
-    const result = outcome === true ? 'win' : outcome === false ? 'loss' : outcome;
-    if (!['win', 'loss', 'draw'].includes(result)) {
+    if (!['win', 'loss', 'draw'].includes(outcome)) {
       throw new TypeError('A game result must be win, loss, or draw.');
     }
 
-    if (result === 'win') record.gamesWon += 1;
-    if (result === 'loss') record.gamesLost += 1;
-    if (result === 'draw') record.gamesDrawn = (record.gamesDrawn || 0) + 1;
+    if (outcome === 'win') record.gamesWon += 1;
+    if (outcome === 'loss') record.gamesLost += 1;
+    if (outcome === 'draw') record.gamesDrawn = (record.gamesDrawn || 0) + 1;
 
     await this.persist();
     return this.toPublicUser(userId, record);
